@@ -32,8 +32,8 @@ class Preprocess():
         for file in os.listdir(self.audio_dir):
             if file.endswith(".wav"):
                 duration = librosa.get_duration(filename=os.path.join(self.audio_dir,file),sr=self.sample_rate)
-                if(duration>max_duration):
-                    max_duration=duration
+                if(duration>330):
+                    os.rename(os.path.join(self.audio_dir,file), #add path here)
         return max_duration
 
     def process_data(self, list_songs):
