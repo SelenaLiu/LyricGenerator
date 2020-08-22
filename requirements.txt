@@ -2,3 +2,4 @@ numpy
 wheel
 tensorflow
 audio2numpy
+ffmpeg
