@@ -8,7 +8,7 @@ from keras.models import load_model, Model
 import keras.backend as K
 """
 import numpy as np
-import tensorflow as tf
+#import tensorflow as tf
 import os, librosa
 
 from utils import Utils
@@ -18,7 +18,7 @@ data_dir = "/mnt/d/Repositories/LyricGenerator/data"
 audio_dir = os.path.join(data_dir,"Audio")
 
 #Define constants
-use_gpu = True if (len(tf.config.experimental.list_physical_devices('GPU'))>0) else False
+#use_gpu = True if (len(tf.config.experimental.list_physical_devices('GPU'))>0) else False
 target_sr = 44100
 
 audio_list = []
