@@ -1,15 +1,27 @@
 from utils import Utils
 import numpy as np
+import DALI as dali_code
+
 import pickle, os, subprocess
+
 
 class Preprocess():
 
     def __init__(self,sr):
         self.ut = Utils()
+
         self.converted_audio = "conv_aud.p"
         self.saved_audio_np = "saved_np.p"
+
+        self.dataset_size = 5358
         self.sample_rate = sr
         self.max_length = 0
+
+        self.data_dir = "/mnt/d/Repositories/LyricGenerator/data"
+        self.audio_dir = os.path.join(data_dir,"Audio")
+        self.lyric_dir = os.path.join(data_dir,"Lyrics")
+        self.json_dir = os.path.join(data_dir,"JSON")
+        self.dali_dir = os.path.join(data_dir,"DALI_v1.0")
 
     def get_max_length(self):
         return self.max_length
@@ -55,41 +67,31 @@ class Preprocess():
         pickle.dump(save,open(self.saved_audio_np,"wb"))
         return save
 
-    def find_files(filename, search_path):
+    def find_files(self, filename, search_path):
         result = []
-        # Wlaking top-down from the root
+        # Walking top-down from the root
         for root, dir, files in os.walk(search_path):
             if filename in files:
                 result.append(os.path.join(root, filename))
         return result
 
-    def find_files(filename, search_path):
-        result = []
-        # Wlaking top-down from the root
-        for root, dir, files in os.walk(search_path):
-            if filename in files:
-                result.append(os.path.join(root, filename))
-        return result
+    def jsontotxt(self):
+        dali_data = dali_code.get_the_DALI_dataset(self.dali_dir)
+        dali_info = dali_code.get_info(self.dali_dir + "/info/DALI_DATA_INFO.gz")
 
-
-    def jsontotxt():
-        dali_data_path = "C:\\Users\\Himanish Jindal\\Desktop\\HackThe6ix\\DALI_v1.0"  # Change to your own PATH
-        dali_data = dali_code.get_the_DALI_dataset(dali_data_path)
-        dali_info = dali_code.get_info(dali_data_path + "\\info\\DALI_DATA_INFO.gz")
-
-        for i in range(1, 5358):  # 1200
+        for i in range(1, self.dataset_size+1):
             entry = dali_data[dali_info[i].item(0)]
             if (
                 len(
-                    find_files(
+                    self.find_files(
                         dali_info[i].item(0) + ".json",
-                        "C:\\Users\\Himanish Jindal\\Desktop\\HackThe6ix\\JSON files",  # Change to your own PATH
+                        self.json_dir,
                     )
                 )
                 != 0
             ):
                 # print(entry.annotations["annot"].keys())
-                max_length = get_max_length()
+                max_length = self.max_length()
                 words = ["" for i in range(max_length)]
                 my_annot = entry.annotations["annot"]["words"]
                 length = len(my_annot[0:])
@@ -99,43 +101,34 @@ class Preprocess():
                     print(time1, time2)
                     # for k in range((time1*44100, (time2*44100)):
                     words[time1:time2] = [my_annot[0:][j].get("text")] * (time2 - time1)
-                """
-                a = []
-                length = len(my_annot[0:])
-                for j in range(length):
-                    a.append(my_annot[0:][j].get("text"))
-                """
-                with open(
-                    "C:\\Users\\Himanish Jindal\\Desktop\\HackThe6ix\\New Txt Files\\"  # Change to your own PATH
-                    + dali_info[i].item(0)
-                    + ".txt",
-                    "w",
-                ) as f:
+                with open(os.path.join(self.lyric_dir,dali_info[i].item(0),".txt"),"w") as f:
                     for item in words:
                         f.write("%s\n" % item)
+        pass
 
-    def json_download():
-        dali_data_path = "C:\\Users\\Himanish Jindal\\Desktop\\HackThe6ix\\DALI_v1.0"  # Change to your own PATH
-        dali_data = dali_code.get_the_DALI_dataset(dali_data_path)
-        dali_info = dali_code.get_info(dali_data_path + "\\info\\DALI_DATA_INFO.gz")
+    def json_download(self):
+        dali_data = dali_code.get_the_DALI_dataset(self.dali_dir)
+        dali_info = dali_code.get_info(self.dali_dir + "/info/DALI_DATA_INFO.gz")
 
         a = []
-        for i in range(1, 4000):
+        for i in range(1, self.dataset_size+1):
             a.append(dali_info[i].item(0))
             entry = dali_data[dali_info[i].item(0)]
-            path_save = "C:\\Users\\Himanish Jindal\\Desktop\\HackThe6ix\\JSON files"  # Change to your own PATH
+            path_save = self.json_dir
             name = dali_info[i].item(0)
 
             if (
                 len(
-                    find_files(
+                    self.find_files(
                         dali_info[i].item(0) + ".wav",
-                        "C:\\Users\\Himanish Jindal\\Desktop\\HackThe6ix\\Audio Files",  # Change to your own PATH
+                        self.audio_dir,
                     )
                 )
                 != 0
             ):
                 entry.write_json(path_save, name)
+        pass
+
     # def equalize_length():
     #     #needs code
     #     #pads all songs at end to be same size as max length
