@@ -1,15 +1,11 @@
-from utils import Utils
 import numpy as np
 import DALI as dali_code
 
-import pickle, os, subprocess
-
+import pickle, os, subprocess, librosa
 
 class Preprocess():
 
-    def __init__(self,sr):
-        self.ut = Utils()
-
+    def __init__(self,sr,batch_size):
         self.converted_audio = "conv_aud.p"
         self.saved_audio_np = "saved_np.p"
 
@@ -23,9 +19,22 @@ class Preprocess():
         self.json_dir = os.path.join(self.data_dir,"JSON")
         self.dali_dir = os.path.join(self.data_dir,"DALI_v1.0")
 
+    def load_audio(self,file_path,target_sr):
+        signal, sample_rate = librosa.load(file_path,sr=target_sr,mono=True)
+        samples = librosa.resample(signal,sample_rate,target_sr)
+        return samples, sample_rate
 
-    def get_max_length(self):
-        return self.max_length
+    def change_ext(self,filename,out):
+        return os.path.splitext(filename)[0]+out
+
+    def find_max_length(self):
+        max_duration = 0
+        for file in os.listdir(self.audio_dir):
+            if file.endswith(".wav"):
+                duration = librosa.get_duration(filename=os.path.join(self.audio_dir,file),sr=self.sample_rate)
+                if(duration>max_duration):
+                    max_duration=duration
+        return max_duration
 
     def process_data(self, list_songs):
         # gets longest song from entire array and pads all songs at end to be
@@ -44,7 +53,7 @@ class Preprocess():
             converted = []
         for file in os.listdir(self.audio_dir):
             if file.endswith(".mp3") & (file not in converted):
-                wav_filename = self.ut.change_ext(file,".wav")
+                wav_filename = self.change_ext(file,".wav")
                 if(os.path.isfile(wav_filename)):
                     print("Skipping "+wav_filename+", already converted.")
                     os.remove(file)
@@ -64,7 +73,7 @@ class Preprocess():
         for file in os.listdir(self.audio_dir):
             if file.endswith(".wav"):
                 print("Loading "+file)
-                signal,sr = self.ut.load_audio(os.path.join(self.audio_dir,file),self.sample_rate)
+                signal,sr = self.load_audio(os.path.join(self.audio_dir,file),self.sample_rate)
                 save.append(signal)
         pickle.dump(save,open(self.saved_audio_np,"wb"))
         return save
@@ -82,6 +91,7 @@ class Preprocess():
         dali_info = dali_code.get_info(self.dali_dir + "/info/DALI_DATA_INFO.gz")
 
         all_songs = []
+        batch_counter = 0
 
         for i in range(1, self.dataset_size+1):
             entry = dali_data[dali_info[i].item(0)]
@@ -132,3 +142,7 @@ class Preprocess():
 
     def txt_to_numpy(self, file_name):
         return np.loadtxt(file_name, delimiter="\n")
+
+if(__name__=="__main__"):
+    p = Preprocess(44100)
+    print(p.find_max_length())
