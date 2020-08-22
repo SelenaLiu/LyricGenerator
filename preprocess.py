@@ -54,7 +54,7 @@ class Preprocess():
                 save.append(signal)
         pickle.dump(save,open(self.saved_audio_np,"wb"))
         return save
-    
+
     def find_files(filename, search_path):
         result = []
         # Wlaking top-down from the root
@@ -104,8 +104,8 @@ class Preprocess():
                     "w",
                 ) as f:
                     for item in words:
-                        f.write("%s\n" % item) 
-            
+                        f.write("%s\n" % item)
+
     def json_download():
         dali_data_path = "C:\\Users\\Himanish Jindal\\Desktop\\HackThe6ix\\DALI_v1.0"  # Change to your own PATH
         dali_data = dali_code.get_the_DALI_dataset(dali_data_path)
