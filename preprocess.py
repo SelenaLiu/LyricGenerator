@@ -4,9 +4,11 @@ import pickle, os, subprocess
 
 class Preprocess():
 
-    def __init__():
+    def __init__(self,sr):
         self.ut = Utils()
-        self.saved = "saved.p"
+        self.converted_audio = "conv_aud.p"
+        self.saved_audio_np = "saved_np.p"
+        self.sample_rate = sr
         self.max_length = 0
 
     def get_max_length(self):
@@ -23,8 +25,8 @@ class Preprocess():
             np.pad(element, (0, N), 'constant')
 
     def mp3_to_wav(self,audio_path):
-        if(os.path.exists(self.saved)):
-            converted = pickle.load(open(self.saved,"rb"))
+        if(os.path.exists(self.converted_audio)):
+            converted = pickle.load(open(self.converted_audio,"rb"))
         else:
             converted = []
         for file in os.listdir(audio_path):
@@ -32,7 +34,21 @@ class Preprocess():
                 print("Converting "+file+" from mp3 to wav")
                 subprocess.call(["ffmpeg","-i",(os.path.join(audio_path,file)),(os.path.join(audio_path,self.ut.change_ext(file,".wav")))])
                 converted.append(file)
-        pickle.dump(converted,open(self.saved,"wb"))
+        pickle.dump(converted,open(self.converted_audio,"wb"))
+        return
+
+    def compile_audio(self,audio_path):
+        if(os.path.exists(self.saved_audio_np)):
+            save = pickle.load(open(self.saved_audio_np,"rb"))
+            return
+        else:
+            save = []
+        for file in os.listdir(audio_path):
+            if file.endswith(".wav"):
+                signal,sr = self.ut.load_audio(os.path.join(audio_path,file),self.sample_rate)
+                save.append(signal)
+        pickle.dump(save,open(self.saved_audio_np,"wb"))
+    return
 
     # def equalize_length():
     #     #needs code
