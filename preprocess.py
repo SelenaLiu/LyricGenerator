@@ -18,6 +18,7 @@ class Preprocess():
         self.lyric_dir = os.path.join(self.data_dir,"Lyrics")
         self.json_dir = os.path.join(self.data_dir,"JSON")
         self.dali_dir = os.path.join(self.data_dir,"DALI_v1.0")
+        self.extra_dir = os.path.join(self.data_dir,"Extra Audio")
 
     def load_audio(self,file_path,target_sr):
         signal, sample_rate = librosa.load(file_path,sr=target_sr,mono=True)
@@ -32,8 +33,8 @@ class Preprocess():
         for file in os.listdir(self.audio_dir):
             if file.endswith(".wav"):
                 duration = librosa.get_duration(filename=os.path.join(self.audio_dir,file),sr=self.sample_rate)
-                if(duration>max_duration):
-                    max_duration=duration
+                if(duration>330):
+                    os.rename(os.path.join(self.audio_dir,file), os.path.join(self.extra_dir ,file))
         return max_duration
 
     def process_data(self, list_songs):
