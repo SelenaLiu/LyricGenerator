@@ -57,7 +57,7 @@ class Preprocess():
                 wav_filename = self.change_ext(file,".wav")
                 if(os.path.exists(os.path.join(self.audio_dir,wav_filename))):
                     print("Skipping "+wav_filename+", already converted.")
-                    os.remove(file)
+                    os.remove(os.path.join(self.audio_dir,file))
                 else:
                     print("Converting "+file+" from mp3 to wav")
                     subprocess.call(["ffmpeg","-i",(os.path.join(self.audio_dir,file)),(os.path.join(self.audio_dir,wav_filename))])
