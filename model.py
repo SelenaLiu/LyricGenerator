@@ -26,3 +26,5 @@ label_list = []
 
 p = Preprocess()
 p.mp3_to_wav(audio_dir)
+p.jsontotxt()
+
