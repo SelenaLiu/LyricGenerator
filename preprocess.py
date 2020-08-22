@@ -11,7 +11,7 @@ class Preprocess():
 
         self.dataset_size = 5358
         self.sample_rate = sr
-        self.max_length = 14553000 # Changed from 0 
+        self.max_length = 14553000 # Changed from 0
 
         self.data_dir = "/mnt/d/Repositories/LyricGenerator/data"
         self.audio_dir = os.path.join(self.data_dir,"Audio")
@@ -54,7 +54,7 @@ class Preprocess():
         for file in os.listdir(self.audio_dir):
             if file.endswith(".mp3") & (file not in converted):
                 wav_filename = self.change_ext(file,".wav")
-                if(os.path.isfile(wav_filename)):
+                if(os.path.exists(os.path.join(self.audio_dir,wav_filename))):
                     print("Skipping "+wav_filename+", already converted.")
                     os.remove(file)
                 else:
