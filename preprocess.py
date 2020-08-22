@@ -35,12 +35,12 @@ class Preprocess():
                 subprocess.call(["ffmpeg","-i",(os.path.join(audio_path,file)),(os.path.join(audio_path,self.ut.change_ext(file,".wav")))])
                 converted.append(file)
         pickle.dump(converted,open(self.converted_audio,"wb"))
-        return
+        return converted
 
     def compile_audio(self,audio_path):
         if(os.path.exists(self.saved_audio_np)):
             save = pickle.load(open(self.saved_audio_np,"rb"))
-            return
+            return save
         else:
             save = []
         for file in os.listdir(audio_path):
@@ -48,7 +48,7 @@ class Preprocess():
                 signal,sr = self.ut.load_audio(os.path.join(audio_path,file),self.sample_rate)
                 save.append(signal)
         pickle.dump(save,open(self.saved_audio_np,"wb"))
-    return
+        return save
 
     # def equalize_length():
     #     #needs code
