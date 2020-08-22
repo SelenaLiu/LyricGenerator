@@ -15,7 +15,7 @@ class Preprocess():
 
         self.dataset_size = 5358
         self.sample_rate = sr
-        self.max_length = 0
+        self.max_length = 14553000 # Changed from 0 
 
         self.data_dir = "/mnt/d/Repositories/LyricGenerator/data"
         self.audio_dir = os.path.join(self.data_dir,"Audio")
@@ -31,7 +31,7 @@ class Preprocess():
         # gets longest song from entire array and pads all songs at end to be
         # same size as max length
         list_songs.sort(key=len)
-        self.max_length = list_songs[-1].shape[0]
+        # self.max_length = list_songs[-1].shape[0]
         for element in list_songs:
             element_len = element.shape[0]
             N = self.max_length - element_len
