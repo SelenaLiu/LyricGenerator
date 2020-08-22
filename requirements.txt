@@ -4,3 +4,5 @@ tensorflow
 audio2numpy
 ffmpeg
 librosa
+dali-dataset
+pickle
