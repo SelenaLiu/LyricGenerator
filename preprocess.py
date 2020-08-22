@@ -23,8 +23,8 @@ class Preprocess():
         else:
             converted = []
         for file in os.listdir(audio_path):
-            if file.endswith(".mp3"):
+            if file.endswith(".mp3") & (file not in converted):
                 print("Converting "+file+" from mp3 to wav")
                 subprocess.call(["ffmpeg","-i",(os.path.join(audio_path,file)),(os.path.join(audio_path,self.ut.change_ext(file,".wav")))])
                 converted.append(file)
-        #pickle.dump(converted,open(self.saved,"wb"))
+        pickle.dump(converted,open(self.saved,"wb"))
