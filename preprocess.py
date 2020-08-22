@@ -63,6 +63,14 @@ class Preprocess():
                 result.append(os.path.join(root, filename))
         return result
 
+    def find_files(filename, search_path):
+        result = []
+        # Wlaking top-down from the root
+        for root, dir, files in os.walk(search_path):
+            if filename in files:
+                result.append(os.path.join(root, filename))
+        return result
+
 
     def jsontotxt():
         dali_data_path = "C:\\Users\\Himanish Jindal\\Desktop\\HackThe6ix\\DALI_v1.0"  # Change to your own PATH
