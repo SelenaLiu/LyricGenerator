@@ -127,9 +127,6 @@ class Preprocess():
                 != 0
             ):
                 entry.write_json(path_save, name)
-        pass
 
-    # def equalize_length():
-    #     #needs code
-    #     #pads all songs at end to be same size as max length
-    #     pass
+    def txt_to_numpy(self, file_name):
+        np.loadtxt(file_name, delimiter="\n")
