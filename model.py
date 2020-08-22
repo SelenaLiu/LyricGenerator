@@ -11,6 +11,9 @@ import os, librosa
 
 from utils import Utils
 
+data_dir = "/mnt/d/Repositories/LyricGenerator/data"
+
+
 #Define constants
 use_gpu = (len(tf.config.experimental.list_physical_devices('GPU'))>0)?True:False
 target_sr = 44100
