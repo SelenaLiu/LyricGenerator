@@ -54,7 +54,80 @@ class Preprocess():
                 save.append(signal)
         pickle.dump(save,open(self.saved_audio_np,"wb"))
         return save
+    
+    def find_files(filename, search_path):
+        result = []
+        # Wlaking top-down from the root
+        for root, dir, files in os.walk(search_path):
+            if filename in files:
+                result.append(os.path.join(root, filename))
+        return result
 
+
+    def jsontotxt():
+        dali_data_path = "C:\\Users\\Himanish Jindal\\Desktop\\HackThe6ix\\DALI_v1.0"  # Change to your own PATH
+        dali_data = dali_code.get_the_DALI_dataset(dali_data_path)
+        dali_info = dali_code.get_info(dali_data_path + "\\info\\DALI_DATA_INFO.gz")
+
+        for i in range(1, 5358):  # 1200
+            entry = dali_data[dali_info[i].item(0)]
+            if (
+                len(
+                    find_files(
+                        dali_info[i].item(0) + ".json",
+                        "C:\\Users\\Himanish Jindal\\Desktop\\HackThe6ix\\JSON files",  # Change to your own PATH
+                    )
+                )
+                != 0
+            ):
+                # print(entry.annotations["annot"].keys())
+                max_length = get_max_length()
+                words = ["" for i in range(max_length)]
+                my_annot = entry.annotations["annot"]["words"]
+                length = len(my_annot[0:])
+                for j in range(length):
+                    time1 = int(my_annot[0:][j].get("time")[0] * 44100)
+                    time2 = int(my_annot[0:][j].get("time")[1] * 44100)
+                    print(time1, time2)
+                    # for k in range((time1*44100, (time2*44100)):
+                    words[time1:time2] = [my_annot[0:][j].get("text")] * (time2 - time1)
+                """
+                a = []
+                length = len(my_annot[0:])
+                for j in range(length):
+                    a.append(my_annot[0:][j].get("text"))
+                """
+                with open(
+                    "C:\\Users\\Himanish Jindal\\Desktop\\HackThe6ix\\New Txt Files\\"  # Change to your own PATH
+                    + dali_info[i].item(0)
+                    + ".txt",
+                    "w",
+                ) as f:
+                    for item in words:
+                        f.write("%s\n" % item) 
+            
+    def json_download():
+        dali_data_path = "C:\\Users\\Himanish Jindal\\Desktop\\HackThe6ix\\DALI_v1.0"  # Change to your own PATH
+        dali_data = dali_code.get_the_DALI_dataset(dali_data_path)
+        dali_info = dali_code.get_info(dali_data_path + "\\info\\DALI_DATA_INFO.gz")
+
+        a = []
+        for i in range(1, 4000):
+            a.append(dali_info[i].item(0))
+            entry = dali_data[dali_info[i].item(0)]
+            path_save = "C:\\Users\\Himanish Jindal\\Desktop\\HackThe6ix\\JSON files"  # Change to your own PATH
+            name = dali_info[i].item(0)
+
+            if (
+                len(
+                    find_files(
+                        dali_info[i].item(0) + ".wav",
+                        "C:\\Users\\Himanish Jindal\\Desktop\\HackThe6ix\\Audio Files",  # Change to your own PATH
+                    )
+                )
+                != 0
+            ):
+                entry.write_json(path_save, name)
     # def equalize_length():
     #     #needs code
     #     #pads all songs at end to be same size as max length
