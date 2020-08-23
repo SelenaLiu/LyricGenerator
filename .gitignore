@@ -1,3 +1,4 @@
 env/*
 data/*
 *.p
+.DS_store
