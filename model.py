@@ -20,15 +20,11 @@ audio_dir = os.path.join(data_dir,"Audio")
 #Define constants
 #use_gpu = True if (len(tf.config.experimental.list_physical_devices('GPU'))>0) else False
 target_sr = 44100
+batch_size = 128
 
 audio_list = []
 label_list = []
 
-p = Preprocess()
-p.mp3_to_wav(audio_dir)
-<<<<<<< HEAD
-p.compile_audio(audio_dir)
-=======
-p.jsontotxt()
-
->>>>>>> 69303d83730851ec8ee2e0cee8407839f3cb66ef
+p = Preprocess(target_sr,batch_size)
+p.mp3_to_wav()
+#p.compile_audio()
