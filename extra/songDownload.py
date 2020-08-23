@@ -1,10 +1,12 @@
 import DALI as dali_code
 import numpy as np
+import os
 
-dali_data_path = "C:\\Users\\Himanish Jindal\\Desktop\\HackThe6ix\\DALI_v1.0"
+data_dir = "/mnt/d/Repositories/LyricGenerator/data"
+dali_data_path = os.path.join(data_dir,"DALI_v1.0")
 dali_data = dali_code.get_the_DALI_dataset(dali_data_path)
-dali_info = dali_code.get_info(dali_data_path + "\\info\\DALI_DATA_INFO.gz")
-
+dali_info = dali_code.get_info(os.path.join(dali_data_path,"info/DALI_DATA_INFO.gz"))
+print(dali_info)
 """
 a = []
 
@@ -26,8 +28,7 @@ entry.write_json(path_save, name)
 print("Done")
 """
 
-path_audio = "C:\\Users\\Himanish Jindal\\Desktop\\HackThe6ix\\Audio Files"
+path_audio = os.path.join(data_dir,"Audio")
 errors = dali_code.get_audio(dali_info, path_audio, skip=[], keep=[])
 # errors -> ['dali_id', 'youtube_url', 'error']
 print("DONE")
-
