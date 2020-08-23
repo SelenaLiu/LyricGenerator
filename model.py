@@ -14,6 +14,9 @@ import os, librosa
 from utils import Utils
 from preprocess import Preprocess
 
+import torch
+from torch.utils.data import TensorDataset, DataLoader
+
 data_dir = "/mnt/d/Repositories/LyricGenerator/data"
 audio_dir = os.path.join(data_dir,"Audio")
 
@@ -25,6 +28,33 @@ batch_size = 128
 audio_list = []
 label_list = []
 
-p = Preprocess(target_sr,batch_size)
-p.mp3_to_wav()
-#p.compile_audio()
+p = Preprocess()
+p.mp3_to_wav(audio_dir)
+train_audio = p.compile_audio(audio_dir)[0:29]
+# p.dali_json_to_txt()
+train_txt = p.dali_json_to_np()[0:29]
+
+val_audio = p.compile_audio(audio_dir)[29:35]
+# p.dali_json_to_txt()
+val_txt = p.dali_json_to_np()[29:35]
+
+num_epochs = 200
+num_hidden = 50
+num_layers = 1
+batch_size = 128
+
+train_seq_len = [(14553000, 128)]
+
+train_audio_tensor = torch.from_numpy(train_audio)
+train_txt_tensor = torch.from_numpy(train_txt)
+
+train_dataset = TensorDataset(train_audio_tensor, train_txt_tensor)
+train_dataloader = DataLoader(train_dataset)
+
+val_audio_tensor = torch.from_numpy(val_audio)
+val_txt_tensor = torch.from_numpy(val_txt)
+
+val_dataset = TensorDataset(val_audio_tensor, val_txt_tensor)
+val_dataloader = DataLoader(val_dataset)
+
+model = Model(inputs, outputs)
