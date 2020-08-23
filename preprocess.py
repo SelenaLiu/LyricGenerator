@@ -8,10 +8,14 @@ class Preprocess():
     def __init__(self,sr,batch_size):
         self.converted_audio = "conv_aud.p"
         self.saved_audio_np = "saved_np.p"
+        self.lyrics_np = "lyrics.p"
+        self.audio_np = "audio.p"
 
         self.dataset_size = 5358
+        self.batch_size = batch_size
         self.sample_rate = sr
-        self.max_length = 14553000 # Changed from 0
+        self.max_duration = 330
+        self.max_length = self.sample_rate*self.max_duration # Changed from 0
 
         self.data_dir = "/mnt/d/Repositories/LyricGenerator/data"
         self.audio_dir = os.path.join(self.data_dir,"Audio")
@@ -19,6 +23,14 @@ class Preprocess():
         self.json_dir = os.path.join(self.data_dir,"JSON")
         self.dali_dir = os.path.join(self.data_dir,"DALI_v1.0")
         self.extra_dir = os.path.join(self.data_dir,"Extra Audio")
+
+        self.audio_np_dir = os.path.join(self.data_dir,"audio_np")
+        self.lyrics_np_dir = os.path.join(self.data_dir,"lyrics_np")
+
+        print("[dali] caching dataset")
+        self.dali_data = dali_code.get_the_DALI_dataset(self.dali_dir)
+        self.dali_info = dali_code.get_info(self.dali_dir + "/info/DALI_DATA_INFO.gz")
+        print("cache complete")
 
     def load_audio(self,file_path,target_sr):
         signal, sample_rate = librosa.load(file_path,sr=target_sr,mono=True)
@@ -47,6 +59,99 @@ class Preprocess():
             N = self.max_length - element_len
             np.pad(element, (0, N), 'constant')
 
+    def compile_audio(self):
+        all_audio_np = []
+        save = []
+
+        count = 1
+        batch = 1
+
+        for i in range(1, self.dataset_size+1):
+            entry = self.dali_data[self.dali_info[i].item(0)]
+            filename = self.dali_info[i].item(0) + ".wav"
+            if (len(self.find_files(filename,self.audio_dir))!= 0):
+                print("[audio] Adding "+str(self.dali_info[i].item(0))+" to batch "+str(batch))
+                signal,sr = self.load_audio(os.path.join(self.audio_dir,filename),self.sample_rate)
+                save.append(signal)
+                count = count + 1
+            if count % 128 == 0:
+                print("[audio] Saving batch "+str(batch))
+                all_audio_np.append(save)
+                pickle_name = str(batch)+self.audio_np
+                pickle.dump(save,open(os.path.join(self.audio_np_dir,pickle_name),"wb"))
+                batch = batch + 1
+                save = []
+        all_audio_np.append(save)
+        pickle_name = str(batch)+self.audio_np
+        pickle.dump(save,open(os.path.join(self.audio_np_dir,pickle_name),"wb"))
+        return np.array(all_audio_np)
+
+    def compile_lyrics(self):
+        all_lyrics_np = []
+        save = []
+
+        count = 1
+        batch = 1
+
+        for i in range(1, self.dataset_size+1):
+            entry = self.dali_data[self.dali_info[i].item(0)]
+            filename = self.dali_info[i].item(0) + ".wav"
+            if (len(filename,self.find_files(filename,self.audio_dir))!= 0):
+                print("[lyrics] Adding "+str(self.dali_info[i].item(0))+" to batch "+str(batch))
+                words = get_single_lyric(entry)
+                words_np = np.array(words)
+                save.append(words_np)
+                count = count + 1
+            if count % 128 == 0:
+                print("[lyrics] Saving batch "+str(batch))
+                all_lyrics_np.append(save)
+                pickle_name = str(batch)+self.lyrics_np
+                pickle.dump(save,open(os.path.join(self.lyrics_np_dir,pickle_name),"wb"))
+                batch = batch + 1
+                save = []
+        all_lyrics_np.append(save)
+        pickle_name = str(batch)+self.lyrics_np
+        pickle.dump(save,open(os.path.join(self.lyrics_np_dir,pickle_name),"wb"))
+        return np.array(all_lyrics_np)
+
+    def dali_json_to_txt(self):
+        for i in range(1, self.dataset_size+1):
+            entry = self.dali_data[self.dali_info[i].item(0)]
+            if (len(self.find_files(self.dali_info[i].item(0) + ".wav",self.audio_dir))!= 0):
+                # print(entry.annotations["annot"].keys())
+                words = get_single_lyric(entry)
+                with open(os.path.join(self.lyric_dir,self.dali_info[i].item(0),".txt"),"w") as f:
+                    for item in words:
+                        f.write("%s\n" % item)
+        return True
+
+    def get_single_lyric(self,entry):
+        words = ["" for i in range(self.max_length)]
+        my_annot = entry.annotations["annot"]["words"]
+        length = len(my_annot[0:])
+        for j in range(length):
+            time1 = int(my_annot[0:][j].get("time")[0] * 44100)
+            time2 = int(my_annot[0:][j].get("time")[1] * 44100)
+            words[time1:time2] = [my_annot[0:][j].get("text")] * (time2 - time1)
+        return words
+
+    def json_download(self):
+        a = []
+        for i in range(1, self.dataset_size+1):
+            a.append(self.dali_info[i].item(0))
+            entry = self.dali_data[self.dali_info[i].item(0)]
+            path_save = self.json_dir
+            name = self.dali_info[i].item(0)
+
+            if (len(self.find_files(self.dali_info[i].item(0) + ".wav",self.audio_dir,))!= 0):
+                entry.write_json(path_save, name)
+        pass
+
+    def audio_download(self):
+        path_audio = os.path.join(data_dir,"Audio")
+        errors = dali_code.get_audio(self.dali_info, path_audio, skip=[], keep=[])
+        pass
+
     def mp3_to_wav(self):
         if(os.path.exists(self.converted_audio)):
             converted = pickle.load(open(self.converted_audio,"rb"))
@@ -65,35 +170,6 @@ class Preprocess():
         pickle.dump(converted,open(self.converted_audio,"wb"))
         return converted
 
-    def compile_audio(self):
-        dali_data = dali_code.get_the_DALI_dataset(self.dali_dir)
-        dali_info = dali_code.get_info(self.dali_dir + "/info/DALI_DATA_INFO.gz")
-
-        if(os.path.exists(self.saved_audio_np)):
-            save = pickle.load(open(self.saved_audio_np,"rb"))
-            return save
-        else:
-            save = []
-        all_songs_np = []
-        count = 1
-        firstIndex = 0
-        secondIndex = 0
-        for i in range(1, self.dataset_size+1):
-            entry = dali_data[dali_info[i].item(0)]
-            if (len(self.find_files(dali_info[i].item(0) + ".wav",self.audio_dir))!= 0):
-                print("Loading "+file)
-                signal,sr = self.load_audio(os.path.join(self.audio_dir,file),self.sample_rate)
-                save.append(signal)
-            if count % 128 == 0:
-                firstIndex = secondIndex
-                secondIndex = count
-                all_songs_np.append(save[firstIndex:secondIndex])
-            count = count + 1
-        all_songs_np.append(save[secondIndex:i])
-        pickle.dump(all_songs_np,open(self.saved_audio_np,"wb"))
-        return all_songs_np
-
-
     def find_files(self, filename, search_path):
         result = []
         # Walking top-down from the root
@@ -102,79 +178,10 @@ class Preprocess():
                 result.append(os.path.join(root, filename))
         return result
 
-    def dali_json_to_np(self):
-        dali_data = dali_code.get_the_DALI_dataset(self.dali_dir)
-        dali_info = dali_code.get_info(self.dali_dir + "/info/DALI_DATA_INFO.gz")
-
-        all_songs = []
-        all_lyrics_np = []
-        count = 1
-        firstIndex = 0
-        secondIndex = 0
-
-        for i in range(1, self.dataset_size+1):
-            entry = dali_data[dali_info[i].item(0)]
-            if (len(self.find_files(dali_info[i].item(0) + ".wav",self.audio_dir))!= 0):
-                words = get_single_lyric(entry)
-                words_np = np.array(words)
-            all_songs.append(words_np)
-            if count % 128 == 0:
-                firstIndex = secondIndex
-                secondIndex = count
-                all_lyrics_np.append(all_songs[firstIndex:secondIndex])
-            count = count + 1
-        all_lyrics_np.append(save[secondIndex:i])
-        return np.array(all_lyrics_np)
-
-    def dali_json_to_txt(self):
-        dali_data = dali_code.get_the_DALI_dataset(self.dali_dir)
-        dali_info = dali_code.get_info(self.dali_dir + "/info/DALI_DATA_INFO.gz")
-
-        for i in range(1, self.dataset_size+1):
-            entry = dali_data[dali_info[i].item(0)]
-            if (len(self.find_files(dali_info[i].item(0) + ".wav",self.audio_dir))!= 0):
-                # print(entry.annotations["annot"].keys())
-                words = get_single_lyric(entry)
-                with open(os.path.join(self.lyric_dir,dali_info[i].item(0),".txt"),"w") as f:
-                    for item in words:
-                        f.write("%s\n" % item)
-        return True
-
-    def get_single_lyric(self,entry):
-        words = ["" for i in range(self.max_length)]
-        my_annot = entry.annotations["annot"]["words"]
-        length = len(my_annot[0:])
-        for j in range(length):
-            time1 = int(my_annot[0:][j].get("time")[0] * 44100)
-            time2 = int(my_annot[0:][j].get("time")[1] * 44100)
-            words[time1:time2] = [my_annot[0:][j].get("text")] * (time2 - time1)
-        return words
-
-    def json_download(self):
-        dali_data = dali_code.get_the_DALI_dataset(self.dali_dir)
-        dali_info = dali_code.get_info(self.dali_dir + "/info/DALI_DATA_INFO.gz")
-
-        a = []
-        for i in range(1, self.dataset_size+1):
-            a.append(dali_info[i].item(0))
-            entry = dali_data[dali_info[i].item(0)]
-            path_save = self.json_dir
-            name = dali_info[i].item(0)
-
-            if (len(self.find_files(dali_info[i].item(0) + ".wav",self.audio_dir,))!= 0):
-                entry.write_json(path_save, name)
-        pass
-
-    def audio_download(self):
-        dali_data = dali_code.get_the_DALI_dataset(self.dali_dir)
-        dali_info = dali_code.get_info(self.dali_dir + "/info/DALI_DATA_INFO.gz")
-        path_audio = os.path.join(data_dir,"Audio")
-        errors = dali_code.get_audio(dali_info, path_audio, skip=[], keep=[])
-        pass
-
     def txt_to_numpy(self, file_name):
         return np.loadtxt(file_name, delimiter="\n")
 
 if(__name__=="__main__"):
-    p = Preprocess(44100)
-    print(p.find_max_length())
+    p = Preprocess(44100,128)
+    p.compile_audio()
+    p.compile_lyrics()
