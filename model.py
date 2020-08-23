@@ -23,6 +23,7 @@ audio_dir = os.path.join(data_dir,"Audio")
 #Define constants
 #use_gpu = True if (len(tf.config.experimental.list_physical_devices('GPU'))>0) else False
 target_sr = 44100
+batch_size = 128
 
 audio_list = []
 label_list = []
@@ -40,7 +41,6 @@ val_txt = p.dali_json_to_np()[29:35]
 num_epochs = 200
 num_hidden = 50
 num_layers = 1
-batch_size = 128
 
 # train_audio_tensor = torch.from_numpy(train_audio)
 # train_txt_tensor = torch.from_numpy(train_txt)
@@ -80,4 +80,3 @@ x = Dense(256, activation='relu')(x)
 outputs = Dense(len(labels), activation="softmax")(x)
 model = Model(inputs, outputs)
 model.summary()
-
