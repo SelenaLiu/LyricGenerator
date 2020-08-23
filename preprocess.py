@@ -1,7 +1,48 @@
+import multiprocessing as mp
 import numpy as np
 import DALI as dali_code
-
 import pickle, os, subprocess, librosa
+import collections
+
+def find_files(filename, search_path):
+    result = []
+    # Walking top-down from the root
+    for root, dir, files in os.walk(search_path):
+        if filename in files:
+            result.append(os.path.join(root, filename))
+    return result
+
+def load_audio(file_path,target_sr):
+    try:
+        signal, sample_rate = librosa.load(file_path,sr=target_sr,mono=True)
+        samples = librosa.resample(signal,sample_rate,target_sr)
+        return samples,sample_rate
+    except:
+        print("Error Loading"+file_path)
+        return -1,-1
+    pass
+
+def save_single_audio_lyric(data):
+    #print(data[0][0])
+    #print("______________________________________")
+    print(data[2][1])
+
+    id = data[0][0]
+    print(type(id))
+    lyric_np = str(id)+"_lyr.p"
+    audio_np = str(id)+"_aud.p"
+    filename = id+".wav"
+    if(len(find_files(filename,data[2][1]))!= 0):
+        print("["+id[0:5]+"..."+id[-5:0]+"] loading audio and lyrics")
+        audio_np_single,sr = load_audio(os.path.join(data[2][1],filename),data[2][0])
+        if(sr!=-1):
+            os.remove(os.path.join(data[2][1],filename))
+            entry = data[1][int(id)]
+            lyric = get_single_lyric(entry)
+            lyric_np_single = np.array(words)
+            print("["+id[0:5]+"..."+id[-5:0]+"] pickling audio and lyrics")
+            pickle.dump(audio_np_single,open(os.path.join(data[2][2],audio_np),"wb"))
+            pickle.dump(lyric_np_single,open(os.path.join(data[2][3],lyric_np),"wb"))
 
 class Preprocess():
 
@@ -10,6 +51,8 @@ class Preprocess():
         self.saved_audio_np = "saved_np.p"
         self.lyrics_np = "lyrics.p"
         self.audio_np = "audio.p"
+        self.dali_data_p = "dali_data.p"
+        self.dali_info_p = "dali_info.p"
 
         self.dataset_size = 5358
         self.batch_size = batch_size
@@ -28,14 +71,25 @@ class Preprocess():
         self.lyrics_np_dir = os.path.join(self.data_dir,"lyrics_np")
 
         print("[dali] caching dataset")
-        self.dali_data = dali_code.get_the_DALI_dataset(self.dali_dir)
-        self.dali_info = dali_code.get_info(self.dali_dir + "/info/DALI_DATA_INFO.gz")
+        if(os.path.exists(self.dali_data_p)):
+            print("[dali_data] reading from file...")
+            self.dali_data = pickle.load(open(self.dali_data_p,"rb"))
+            print("[dali_data] read complete")
+        else:
+            self.dali_data = dali_code.get_the_DALI_dataset(self.dali_dir)
+            pickle.dump(self.dali_data,open(self.dali_data_p,"wb"))
+        if(os.path.exists(self.dali_info_p)):
+            print("[dali_info] reading from file...")
+            self.dali_info = pickle.load(open(self.dali_info_p,"rb"))
+            print("[dali_info] read complete")
+        else:
+            self.dali_info = dali_code.get_info(self.dali_dir + "/info/DALI_DATA_INFO.gz")
+            pickle.dump(self.dali_info,open(self.dali_info_p,"wb"))
         print("cache complete")
+        pass
 
-    def load_audio(self,file_path,target_sr):
-        signal, sample_rate = librosa.load(file_path,sr=target_sr,mono=True)
-        samples = librosa.resample(signal,sample_rate,target_sr)
-        return samples, sample_rate
+    def get_dali_data(self):
+        return self.dali_data
 
     def change_ext(self,filename,out):
         return os.path.splitext(filename)[0]+out
@@ -69,12 +123,14 @@ class Preprocess():
         for i in range(1, self.dataset_size+1):
             entry = self.dali_data[self.dali_info[i].item(0)]
             filename = self.dali_info[i].item(0) + ".wav"
-            if (len(self.find_files(filename,self.audio_dir))!= 0):
+            if (len(find_files(filename,self.audio_dir))!= 0):
                 print("[audio] Adding "+str(self.dali_info[i].item(0))+" to batch "+str(batch))
                 signal,sr = self.load_audio(os.path.join(self.audio_dir,filename),self.sample_rate)
-                save.append(signal)
-                count = count + 1
-            if count % 128 == 0:
+                if(sr!=-1):
+                    os.remove(os.path.join(self.audio_dir,filename))
+                    save.append(signal)
+                    count = count + 1
+            if count % self.batch_size == 0:
                 print("[audio] Saving batch "+str(batch))
                 all_audio_np.append(save)
                 pickle_name = str(batch)+self.audio_np
@@ -96,13 +152,13 @@ class Preprocess():
         for i in range(1, self.dataset_size+1):
             entry = self.dali_data[self.dali_info[i].item(0)]
             filename = self.dali_info[i].item(0) + ".wav"
-            if (len(filename,self.find_files(filename,self.audio_dir))!= 0):
+            if (len(find_files(filename,self.audio_dir))!= 0):
                 print("[lyrics] Adding "+str(self.dali_info[i].item(0))+" to batch "+str(batch))
-                words = get_single_lyric(entry)
+                words = self.get_single_lyric(entry)
                 words_np = np.array(words)
                 save.append(words_np)
                 count = count + 1
-            if count % 128 == 0:
+            if count % self.batch_size == 0:
                 print("[lyrics] Saving batch "+str(batch))
                 all_lyrics_np.append(save)
                 pickle_name = str(batch)+self.lyrics_np
@@ -114,10 +170,29 @@ class Preprocess():
         pickle.dump(save,open(os.path.join(self.lyrics_np_dir,pickle_name),"wb"))
         return np.array(all_lyrics_np)
 
+    def compile_audio_and_lyrics_mp(self):#Not Functional
+
+        data = [list(a) for a in zip(np.sort(self.dali_info,axis=0)[1:],self.dali_data,[[self.sample_rate,self.audio_dir,self.audio_np_dir,self.lyrics_np_dir] for i in range(self.dataset_size)])]
+
+        #print(data[0][0])
+        #print(data[0][1])
+        #print(type(data[0][0]))
+        #print(type(data[0][1]))
+        print(np.sort(self.dali_info,axis=0))
+        print()
+        od = collections.OrderedDict(sorted(d.items()))
+        print(self.dali_data.keys())
+        #entry = self.dali_data[item]
+        #pool = mp.Pool()
+        #pool.map(save_single_audio_lyric,data)
+        #pool.close()
+        #pool.join()
+        pass
+
     def dali_json_to_txt(self):
         for i in range(1, self.dataset_size+1):
             entry = self.dali_data[self.dali_info[i].item(0)]
-            if (len(self.find_files(self.dali_info[i].item(0) + ".wav",self.audio_dir))!= 0):
+            if (len(find_files(self.dali_info[i].item(0) + ".wav",self.audio_dir))!= 0):
                 # print(entry.annotations["annot"].keys())
                 words = get_single_lyric(entry)
                 with open(os.path.join(self.lyric_dir,self.dali_info[i].item(0),".txt"),"w") as f:
@@ -143,7 +218,7 @@ class Preprocess():
             path_save = self.json_dir
             name = self.dali_info[i].item(0)
 
-            if (len(self.find_files(self.dali_info[i].item(0) + ".wav",self.audio_dir,))!= 0):
+            if (len(find_files(self.dali_info[i].item(0) + ".wav",self.audio_dir,))!= 0):
                 entry.write_json(path_save, name)
         pass
 
@@ -183,5 +258,6 @@ class Preprocess():
 
 if(__name__=="__main__"):
     p = Preprocess(44100,128)
-    p.compile_audio()
-    p.compile_lyrics()
+    #p.compile_audio()
+    #p.compile_lyrics()
+    p.compile_audio_and_lyrics_mp()
