@@ -1,5 +1,8 @@
-numpy
+numpy<19.0
 wheel
 tensorflow
 audio2numpy
 ffmpeg
+librosa
+dali-dataset
+keras
