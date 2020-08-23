@@ -1,6 +1,6 @@
+import multiprocessing as mp
 import numpy as np
 import DALI as dali_code
-
 import pickle, os, subprocess, librosa
 
 class Preprocess():
@@ -31,11 +31,22 @@ class Preprocess():
         self.dali_data = dali_code.get_the_DALI_dataset(self.dali_dir)
         self.dali_info = dali_code.get_info(self.dali_dir + "/info/DALI_DATA_INFO.gz")
         print("cache complete")
+        print(self.dali_info)
+        print()
+        print(self.dali_data)
+
+    def get_dali_data(self):
+        return self.dali_data
 
     def load_audio(self,file_path,target_sr):
-        signal, sample_rate = librosa.load(file_path,sr=target_sr,mono=True)
-        samples = librosa.resample(signal,sample_rate,target_sr)
-        return samples, sample_rate
+        try:
+            signal, sample_rate = librosa.load(file_path,sr=target_sr,mono=True)
+            samples = librosa.resample(signal,sample_rate,target_sr)
+            return samples,sample_rate
+        except:
+            print("Error Loading"+file_path)
+            return -1,-1
+        pass
 
     def change_ext(self,filename,out):
         return os.path.splitext(filename)[0]+out
@@ -72,9 +83,11 @@ class Preprocess():
             if (len(self.find_files(filename,self.audio_dir))!= 0):
                 print("[audio] Adding "+str(self.dali_info[i].item(0))+" to batch "+str(batch))
                 signal,sr = self.load_audio(os.path.join(self.audio_dir,filename),self.sample_rate)
-                save.append(signal)
-                count = count + 1
-            if count % 128 == 0:
+                if(sr!=-1):
+                    os.remove(os.path.join(self.audio_dir,filename))
+                    save.append(signal)
+                    count = count + 1
+            if count % self.batch_size == 0:
                 print("[audio] Saving batch "+str(batch))
                 all_audio_np.append(save)
                 pickle_name = str(batch)+self.audio_np
@@ -102,13 +115,39 @@ class Preprocess():
                 words_np = np.array(words)
                 save.append(words_np)
                 count = count + 1
-            if count % 128 == 0:
+            if count % self.batch_size == 0:
                 print("[lyrics] Saving batch "+str(batch))
                 all_lyrics_np.append(save)
                 pickle_name = str(batch)+self.lyrics_np
                 pickle.dump(save,open(os.path.join(self.lyrics_np_dir,pickle_name),"wb"))
                 batch = batch + 1
                 save = []
+        all_lyrics_np.append(save)
+        pickle_name = str(batch)+self.lyrics_np
+        pickle.dump(save,open(os.path.join(self.lyrics_np_dir,pickle_name),"wb"))
+        return np.array(all_lyrics_np)
+
+    def compile_audio_and_lyrics_mp(self):#Not Functional
+        all_lyrics_np = []
+        all_audio_np = []
+        save_lyrics_np = []
+        save_audio_np = []
+        data_q = []
+
+        count = 1
+        batch = 1
+
+        for i in range(1, self.dataset_size+1):
+            item = self.dali_info[i].item(0)
+            entry = self.dali_data[item]
+            filename = item + ".wav"
+            if(len(filename,self.find_files(filename,self.audio_dir))!= 0):
+                data_q.append(item)
+                count = count + 1
+            if(count == self.batch_size):
+                #pool = mp.Pool()
+                #pool.map()
+                pass
         all_lyrics_np.append(save)
         pickle_name = str(batch)+self.lyrics_np
         pickle.dump(save,open(os.path.join(self.lyrics_np_dir,pickle_name),"wb"))
@@ -124,6 +163,13 @@ class Preprocess():
                     for item in words:
                         f.write("%s\n" % item)
         return True
+
+    def append_to_batch(self,item,save_lyrics_np,save_audio_np):
+        signal,sr = self.load_audio(os.path.join(self.audio_dir,filename),self.sample_rate)
+        if(sr!=-1):
+            os.remove(os.path.join(self.audio_dir,filename))
+            save.append(signal)
+            count = count + 1
 
     def get_single_lyric(self,entry):
         words = ["" for i in range(self.max_length)]
@@ -183,5 +229,5 @@ class Preprocess():
 
 if(__name__=="__main__"):
     p = Preprocess(44100,128)
-    p.compile_audio()
-    p.compile_lyrics()
+    #p.compile_audio()
+    #p.compile_lyrics()
